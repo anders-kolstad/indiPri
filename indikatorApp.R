@@ -41,20 +41,49 @@ ui <-
       pickerInput(inputId = "økosystem", 
                   label = "Økosystem", 
                   choices =eco,
-                  selected = "Våtmark",
-                  multiple = F),
+                  selected = eco,
+                  multiple = T,
+                  options = list(
+                    `actions-box` = TRUE,
+                    `deselect-all-text` = "Ingen",
+                    `select-all-text` = "Velg alle",
+                    `none-selected-text` = "Velg fra listen"
+                  )),
       
       pickerInput(inputId = "pilot", 
                   label = "Uttesting", 
                   choices =unique(dat$`Testet i pilot`),
                   selected =c("PAEC", "IBECA"),
-                  multiple = T),
+                  multiple = T,
+                  options = list(
+                    `actions-box` = TRUE,
+                    `deselect-all-text` = "Ingen",
+                    `select-all-text` = "Velg alle",
+                    `none-selected-text` = "Velg fra listen"
+                  )),
       
       pickerInput(inputId = "kjerne", 
                   label = "Kjerneindikatorer", 
                   choices =kjerne,
                   selected =kjerne[!kjerne %in% c(0)],
-                  multiple = T)
+                  multiple = T,
+                  options = list(
+                    `actions-box` = TRUE,
+                    `deselect-all-text` = "Ingen",
+                    `select-all-text` = "Velg alle",
+                    `none-selected-text` = "Velg fra listen"
+                  )),
+      pickerInput(inputId = "egenskap", 
+                  label = "Egenskap", 
+                  choices =unique(dat$`Økologisk egenskap`),
+                  selected =unique(dat$`Økologisk egenskap`),
+                  multiple = T,
+                  options = list(
+                    `actions-box` = TRUE,
+                    `deselect-all-text` = "Ingen",
+                    `select-all-text` = "Velg alle",
+                    `none-selected-text` = "Venligst velg en eller flere egenskaper"
+                  ))
     ),
     
     dashboardBody(
@@ -83,15 +112,19 @@ ui <-
 
 server <- function(input, output) {
   
+  # set page length for tables
+  options(DT.options = list(pageLength = 200))
   
-  
-  # melt data
+  # melt data and filter by egenskap
   datRMelt <- reactive({
     
     meltDat <- data.table::melt(setDT(dat),
                                 measure.vars = eco,
                                 variable.name = "Økosystem_long",
                                 na.rm=T)
+    meltDat <- meltDat[meltDat$`Økologisk egenskap` %in% input$egenskap,]
+    meltDat
+    
   })
   
   
@@ -107,7 +140,8 @@ server <- function(input, output) {
 
     temp[
         temp$`Testet i pilot` %in% input$pilot &
-        temp$ecoSum %in% input$kjerne 
+        temp$ecoSum %in% input$kjerne          &
+        temp$`Økologisk egenskap` %in% input$egenskap
         ,
       ]
   })
@@ -119,26 +153,40 @@ server <- function(input, output) {
     
     temp[
       temp$`Testet i pilot` %in% input$pilot &
-        temp$ecoSum %in% input$kjerne 
+        temp$ecoSum %in% input$kjerne        
       ,
     ]
   })
   
-  # filtrert datasett kun etter økosystemvalg
-  datREco <- reactive({
+ # # filtrert datasett kun etter økosystemvalg
+ # datREco <- reactive({
+ #   
+ #   ecotemp <- dat
+ #   
+ #   if("Våtmark"            %in% input$økosystem)  ecotemp <- ecotemp[ecotemp$Våtmark==1,]             
+ #   if("Semi-naturlig mark" %in% input$økosystem)  ecotemp <- ecotemp[ecotemp$`Semi-naturlig mark`==1,] 
+ #   if("Åpne områder"       %in% input$økosystem)  ecotemp <- ecotemp[ecotemp$`Åpne områder`==1,]     
+ #   ecotemp
+ #   
+ # })
+  
+  # filtrert datasett basert på valg i tabellen
+  datRvalg <- reactive({
     
-    ecotemp <- dat
-    
-    if("Våtmark"            %in% input$økosystem)  ecotemp <- ecotemp[ecotemp$Våtmark==1,]             
-    if("Semi-naturlig mark" %in% input$økosystem)  ecotemp <- ecotemp[ecotemp$`Semi-naturlig mark`==1,] 
-    if("Åpne områder"       %in% input$økosystem)  ecotemp <- ecotemp[ecotemp$`Åpne områder`==1,]     
-    ecotemp
-    
+    temp <- datRtab()[input$myTable_rows_selected,]
+    temp <- data.table::melt(setDT(temp),
+                             measure.vars = eco,
+                             variable.name = "Økosystem_long",
+                             na.rm=T)
+    temp
   })
   
   
-  
   output$myBarplot <- renderPlot({
+    
+    ifelse(is.null(input$myTable_rows_selected), 
+           t <- datRfig()[0,],
+           t <- datRvalg())
     
     ggplot(datRMelt(), 
            aes( x = `Økologisk egenskap`))+
@@ -153,6 +201,11 @@ server <- function(input, output) {
                fill = "grey80",
                colour = "grey30",
                size=1.5)+
+      geom_bar(data = t,
+               stat = "count",
+               fill = "green",
+               colour = "grey30",
+               size=1.5)+
       geom_hline(yintercept = 0.5, size = 2, alpha = .5, colour="red")+
       geom_hline(yintercept = 1.5, size = 2, alpha = .5, colour="orange")+
       geom_hline(yintercept = 2.5, size = 2, alpha = .5, colour="green")+
@@ -160,13 +213,17 @@ server <- function(input, output) {
       theme_bw(base_size = 12)+
       coord_flip()+
       labs(x = "", y = "Antall indikatorer")+
-      ggtitle(paste("Egenskaper - ", input$økosystem))
+      ggtitle("Egenskaper - ")
     
   })
  
   
   
   output$myBarplotECT <- renderPlot({
+    
+    ifelse(is.null(input$myTable_rows_selected), 
+           t <- datRfig()[0,],
+           t <- datRvalg())
     
     ggplot(datRMelt(), 
       aes( x = `ECT-klasse`))+
@@ -183,6 +240,11 @@ server <- function(input, output) {
                fill = "grey80",
                colour = "grey30",
                size=1.5)+
+      geom_bar(data = t,
+               stat = "count",
+               fill = "green",
+               colour = "grey30",
+               size=1.5)+
       geom_hline(yintercept = 0.5, size = 2, alpha= .5, colour="red")+
       geom_hline(yintercept = 1.5, size = 2, alpha= .5, colour="orange")+
       geom_hline(yintercept = 2.5, size = 2, alpha= .5, colour="green")+
@@ -190,7 +252,7 @@ server <- function(input, output) {
       theme_bw(base_size = 12)+
       coord_flip()+
       labs(x = "", y = "Antall indikatorer")+
-      ggtitle(paste("ECT-klasser - ", input$økosystem))
+      ggtitle("ECT-klasser - ")
     
   })  
   
