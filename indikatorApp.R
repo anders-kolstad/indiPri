@@ -5,6 +5,7 @@ library(dashboardthemes)
 library(tidyverse)
 library(readxl)
 library(shinyWidgets)
+library(data.table)
 library(DT)
 
 dat <- read_excel("data/indikatorer.xlsx", 
@@ -20,6 +21,11 @@ dat <- read_excel("data/indikatorer.xlsx",
 eco <- c("Våtmark", "Semi-naturlig mark", "Åpne områder")
 dat$ecoSum <- rowSums(dat[,eco], na.rm = T)  
 kjerne <- c("1 Økosystem" = 1, "2 Økosystemer" = 2, "3 Økosystemer" = 3, "Ingen" = 0)
+
+
+
+
+# Start App
 ui <- 
   dashboardPage(
     
@@ -57,12 +63,11 @@ ui <-
       ),
       
       fluidRow(
-       column(width = 6,
-            plotOutput('myBarplot')
-       ),
-        column(width = 6,
+       
+            plotOutput('myBarplot'),
             plotOutput('myBarplotECT')  
-        )
+      
+        
         ),
         
         fluidRow(
@@ -80,8 +85,18 @@ server <- function(input, output) {
   
   
   
-  # filtrert datasett
-  datR <- reactive({
+  # melt data
+  datRMelt <- reactive({
+    
+    meltDat <- data.table::melt(setDT(dat),
+                                measure.vars = eco,
+                                variable.name = "Økosystem_long",
+                                na.rm=T)
+  })
+  
+  
+  # filtrert datasett (til tabellen, ikke til figurene)
+  datRtab <- reactive({
     
     temp <- dat
     temp$incl <- NA
@@ -97,6 +112,17 @@ server <- function(input, output) {
       ]
   })
   
+  # filtrert datasett (til figurene, ikke til tabellen)
+  datRfig <- reactive({
+    
+    temp <- datRMelt()
+    
+    temp[
+      temp$`Testet i pilot` %in% input$pilot &
+        temp$ecoSum %in% input$kjerne 
+      ,
+    ]
+  })
   
   # filtrert datasett kun etter økosystemvalg
   datREco <- reactive({
@@ -111,21 +137,26 @@ server <- function(input, output) {
   })
   
   
+  
   output$myBarplot <- renderPlot({
     
-    ggplot(datREco(), aes( x = `Økologisk egenskap`
-    ))+
+    ggplot(datRMelt(), 
+           aes( x = `Økologisk egenskap`))+
       geom_bar(stat = "count",
                fill = "grey80",
                colour = "grey30",
                size=1.5,
                alpha = 0.3,
                width=.1)+
-      geom_bar(data = datR(),
+      geom_bar(data = datRfig(),
                stat = "count",
                fill = "grey80",
                colour = "grey30",
                size=1.5)+
+      geom_hline(yintercept = 0.5, size = 2, alpha = .5, colour="red")+
+      geom_hline(yintercept = 1.5, size = 2, alpha = .5, colour="orange")+
+      geom_hline(yintercept = 2.5, size = 2, alpha = .5, colour="green")+
+      facet_wrap(.~Økosystem_long)+
       theme_bw(base_size = 12)+
       coord_flip()+
       labs(x = "", y = "Antall indikatorer")+
@@ -137,20 +168,26 @@ server <- function(input, output) {
   
   output$myBarplotECT <- renderPlot({
     
-    ggplot(datREco(), aes( x = `ECT-klasse`
-    ))+
-      geom_bar(stat = "count",
+    ggplot(datRMelt(), 
+      aes( x = `ECT-klasse`))+
+       geom_bar(
+               stat = "count",
                fill = "grey80",
                colour = "grey30",
                size=1.5,
                alpha=.3,
-               width=.1)+
-      geom_bar(data = datR(),
+               width=.1
+               )+
+      geom_bar(data = datRfig(),
                stat = "count",
                fill = "grey80",
                colour = "grey30",
                size=1.5)+
-      theme_bw()+
+      geom_hline(yintercept = 0.5, size = 2, alpha= .5, colour="red")+
+      geom_hline(yintercept = 1.5, size = 2, alpha= .5, colour="orange")+
+      geom_hline(yintercept = 2.5, size = 2, alpha= .5, colour="green")+
+      facet_wrap(.~Økosystem_long)+
+      theme_bw(base_size = 12)+
       coord_flip()+
       labs(x = "", y = "Antall indikatorer")+
       ggtitle(paste("ECT-klasser - ", input$økosystem))
@@ -161,7 +198,7 @@ server <- function(input, output) {
   output$myTable <- 
     renderDataTable({
       
-      DT::datatable(datR(), 
+      DT::datatable(datRtab(), 
                     options = list(
                       scrollX = TRUE,
                       columnDefs = list(list(
