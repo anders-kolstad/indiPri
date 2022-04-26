@@ -21,22 +21,23 @@ dat <- read_excel("data/indikatorer.xlsx",
 eco <- c("Våtmark", "Semi-naturlig mark", "Åpne områder")
 dat$ecoSum <- rowSums(dat[,eco], na.rm = T)  
 kjerne <- c("1 Økosystem" = 1, "2 Økosystemer" = 2, "3 Økosystemer" = 3, "Ingen" = 0)
-
+met <- c("Tilnærmet klare til bruk", "Delvis utviklet")
 
 
 
 # Start App
 ui <- 
   dashboardPage(
-    
-    title = "Indikatoroversikt",
-    
+ 
     dashboardHeader(
-      title = textOutput('Hei Hopp'),
-      titleWidth = 400
+      title = 'indiPri'
+     
     ),
     
     dashboardSidebar(
+      
+      h2("Fitrer data"),
+      br(),
       
       pickerInput(inputId = "økosystem", 
                   label = "Økosystem", 
@@ -73,6 +74,17 @@ ui <-
                     `select-all-text` = "Velg alle",
                     `none-selected-text` = "Velg fra listen"
                   )),
+      pickerInput(inputId = "metode", 
+                  label = "Utviklingsbehov", 
+                  choices =unique(dat$Metodeutvikling),
+                  selected =unique(dat$Metodeutvikling),
+                  multiple = T,
+                  options = list(
+                    `actions-box` = TRUE,
+                    `deselect-all-text` = "Ingen",
+                    `select-all-text` = "Velg alle",
+                    `none-selected-text` = "Velg fra listen"
+                  )),
       pickerInput(inputId = "egenskap", 
                   label = "Egenskap", 
                   choices =unique(dat$`Økologisk egenskap`),
@@ -83,23 +95,47 @@ ui <-
                     `deselect-all-text` = "Ingen",
                     `select-all-text` = "Velg alle",
                     `none-selected-text` = "Venligst velg en eller flere egenskaper"
+                  )),
+      br(),
+      h4("Skru av eller på utvalg:"),
+      pickerInput(inputId = "metodevalg", 
+                  label = "Metodeutvikling", 
+                  choices =met,
+                  selected = NULL,
+                  multiple = T,
+                  options = list(
+                    `actions-box` = TRUE,
+                    `deselect-all-text` = "Ingen",
+                    `select-all-text` = "Velg alle",
+                    `none-selected-text` = "Ingen valg er gjort"
                   ))
     ),
     
     dashboardBody(
       shinyDashboardThemes(
-        theme = "purple_gradient"
+        theme = "blue_gradient"
       ),
       
       fluidRow(
-       
+       column(width=10,
             plotOutput('myBarplot'),
-            plotOutput('myBarplotECT')  
-      
-        
-        ),
+            plotOutput('myBarplotECT')
+       ),
+       column(width=2,
+              br(),
+              h4('Info:', strong('indiPri'), 'er et verktøy for å kartlegge utviklingsbehov for indikatorer for økologisk tilstand. 
+                 Bruk filtrerne til venstre for å filtrere tabellen og for å bestemme hvilke indikatorer som skal vises i figurene. 
+                 Filteret for økosystem vil uansett kun endre utvalget i tabellen.  Deretter kan du velge å markere rader i tabellen,
+                 enten i menyen til ventre, og/eller ved å trykke på radene i tabellen under. Målet er å finne et utvalg indikatorer
+                 som resulterer i at alle egenskapene og ECT-klassene i figuren øvert har en eller flere indikatore (vist i grønt).')
+        )
+       ),
         
         fluidRow(
+          h2("Tabell over indikatorer"),
+          h4("Utvalget endrer seg basert på filtrene til høyre."),
+          h4("Trykk på rader for å velge eller avvelge de. Utvalget vises som grønne søyler i figurene over."),
+          br(),
           box(width=NULL,
               DTOutput('myTable'))
         )
@@ -112,10 +148,14 @@ ui <-
 
 server <- function(input, output) {
   
+## OPTIONS ######################################################
   # set page length for tables
   options(DT.options = list(pageLength = 200))
   
-  # melt data and filter by egenskap
+  
+## REACTIVE DATASETS ##########################################
+  
+  # Melt data and filter by egenskap
   datRMelt <- reactive({
     
     meltDat <- data.table::melt(setDT(dat),
@@ -127,6 +167,19 @@ server <- function(input, output) {
     
   })
   
+
+  # filtrert datasett ytterligere (til figurene, ikke til tabellen)
+  datRfig <- reactive({
+    
+    temp <- datRMelt()
+    
+    temp[
+      temp$`Testet i pilot` %in% input$pilot &
+      temp$ecoSum %in% input$kjerne          &
+      temp$Metodeutvikling %in% input$metode
+      ,
+    ]
+  })
   
   # filtrert datasett (til tabellen, ikke til figurene)
   datRtab <- reactive({
@@ -139,38 +192,19 @@ server <- function(input, output) {
     temp <- temp[temp$incl==1,]
 
     temp[
-        temp$`Testet i pilot` %in% input$pilot &
-        temp$ecoSum %in% input$kjerne          &
-        temp$`Økologisk egenskap` %in% input$egenskap
+        temp$`Testet i pilot`         %in% input$pilot    &
+        temp$ecoSum                   %in% input$kjerne   &
+        temp$`Økologisk egenskap`     %in% input$egenskap &
+        temp$Metodeutvikling          %in% input$metode  
         ,
       ]
   })
   
-  # filtrert datasett (til figurene, ikke til tabellen)
-  datRfig <- reactive({
-    
-    temp <- datRMelt()
-    
-    temp[
-      temp$`Testet i pilot` %in% input$pilot &
-        temp$ecoSum %in% input$kjerne        
-      ,
-    ]
-  })
+ 
   
- # # filtrert datasett kun etter økosystemvalg
- # datREco <- reactive({
- #   
- #   ecotemp <- dat
- #   
- #   if("Våtmark"            %in% input$økosystem)  ecotemp <- ecotemp[ecotemp$Våtmark==1,]             
- #   if("Semi-naturlig mark" %in% input$økosystem)  ecotemp <- ecotemp[ecotemp$`Semi-naturlig mark`==1,] 
- #   if("Åpne områder"       %in% input$økosystem)  ecotemp <- ecotemp[ecotemp$`Åpne områder`==1,]     
- #   ecotemp
- #   
- # })
-  
-  # filtrert datasett basert på valg i tabellen
+ 
+  # filtrert datasett basert på valg i tabellen. 
+  # Disse dataene blir smeltet og ser likt ut som datRfig
   datRvalg <- reactive({
     
     temp <- datRtab()[input$myTable_rows_selected,]
@@ -182,7 +216,13 @@ server <- function(input, output) {
   })
   
   
+  
+## BARPLOTS ########################################
+  
+  ##  First Plot #############################################
+  
   output$myBarplot <- renderPlot({
+    
     
     ifelse(is.null(input$myTable_rows_selected), 
            t <- datRfig()[0,],
@@ -195,10 +235,10 @@ server <- function(input, output) {
                colour = "grey30",
                size=1.5,
                alpha = 0.3,
-               width=.1)+
+               width=.01)+
       geom_bar(data = datRfig(),
                stat = "count",
-               fill = "grey80",
+               fill = "cornsilk",
                colour = "grey30",
                size=1.5)+
       geom_bar(data = t,
@@ -206,17 +246,19 @@ server <- function(input, output) {
                fill = "green",
                colour = "grey30",
                size=1.5)+
-      geom_hline(yintercept = 0.5, size = 2, alpha = .5, colour="red")+
-      geom_hline(yintercept = 1.5, size = 2, alpha = .5, colour="orange")+
-      geom_hline(yintercept = 2.5, size = 2, alpha = .5, colour="green")+
+      #geom_hline(yintercept = 0.5, size = 2, alpha = .5, colour="red")+
+      #geom_hline(yintercept = 1.5, size = 2, alpha = .5, colour="orange")+
+      #geom_hline(yintercept = 2.5, size = 2, alpha = .5, colour="green")+
       facet_wrap(.~Økosystem_long)+
-      theme_bw(base_size = 12)+
+      theme_bw(base_size = 16)+
       coord_flip()+
       labs(x = "", y = "Antall indikatorer")+
       ggtitle("Egenskaper - ")
     
   })
  
+
+  ##  Second Plot #############################################
   
   
   output$myBarplotECT <- renderPlot({
@@ -233,11 +275,11 @@ server <- function(input, output) {
                colour = "grey30",
                size=1.5,
                alpha=.3,
-               width=.1
+               width=.01
                )+
       geom_bar(data = datRfig(),
                stat = "count",
-               fill = "grey80",
+               fill = "burlywood",
                colour = "grey30",
                size=1.5)+
       geom_bar(data = t,
@@ -245,11 +287,11 @@ server <- function(input, output) {
                fill = "green",
                colour = "grey30",
                size=1.5)+
-      geom_hline(yintercept = 0.5, size = 2, alpha= .5, colour="red")+
-      geom_hline(yintercept = 1.5, size = 2, alpha= .5, colour="orange")+
-      geom_hline(yintercept = 2.5, size = 2, alpha= .5, colour="green")+
+      #geom_hline(yintercept = 0.5, size = 2, alpha= .5, colour="red")+
+      #geom_hline(yintercept = 1.5, size = 2, alpha= .5, colour="orange")+
+      #geom_hline(yintercept = 2.5, size = 2, alpha= .5, colour="green")+
       facet_wrap(.~Økosystem_long)+
-      theme_bw(base_size = 12)+
+      theme_bw(base_size = 16)+
       coord_flip()+
       labs(x = "", y = "Antall indikatorer")+
       ggtitle("ECT-klasser - ")
@@ -257,22 +299,28 @@ server <- function(input, output) {
   })  
   
   
-  output$myTable <- 
-    renderDataTable({
-      
-      DT::datatable(datRtab(), 
-                    options = list(
-                      scrollX = TRUE,
-                      columnDefs = list(list(
-                        targets = "_all",
-                        render = JS(
-                          "function(data, type, row, meta) {",
-                          "return type === 'display' && data != null && data.length > 30 ?",
-                          "'<span title=\"' + data + '\">' + data.substr(0, 30) + '...</span>' : data;",
-                          "}")
-                      ))),
-                    class = "display")
+  
+## TABLE ##########################################
+
+  pre <- reactive({
+    # find preselected rows
+    
+      temp <- as.numeric(NULL)
+      t <- datRtab()
+      if("Tilnærmet klare til bruk" %in% input$metodevalg) temp <- c(temp, which(t$Metodeutvikling == "klart"))
+      if("Delvis utviklet" %in% input$metodevalg)          temp <- c(temp, which(t$Metodeutvikling == "delvis klart"))
+      temp
     })
+  
+  output$myTable <- 
+    renderDataTable(
+      DT::datatable(datRtab(), 
+        
+          selection  = list(selected = pre()),
+          options = list(scrollX = TRUE)
+         
+        )
+    )
   
 }
 
