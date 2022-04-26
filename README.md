@@ -1,2 +1,2 @@
-# indikatoroversikt
-En oversikt over indikatorer på økologisk tilstand
+# indiPri
+-et verktøy for å evaluere prioriteringsrekkefølgen for utviklingen av indikatorer på økologisk tilstand.
