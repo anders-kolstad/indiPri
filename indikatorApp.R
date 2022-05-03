@@ -1,12 +1,4 @@
-library(shiny)
-library(shinydashboard)
-library(ggplot2)
-library(dashboardthemes)
-library(tidyverse)
-library(readxl)
-library(shinyWidgets)
-library(data.table)
-library(DT)
+source("libraries.R")
 
 dat <- read_excel("data/indikatorer.xlsx", 
                        sheet = "Indikatoroversikt")
@@ -54,7 +46,7 @@ ui <-
       pickerInput(inputId = "pilot", 
                   label = "Uttesting", 
                   choices =unique(dat$`Testet i pilot`),
-                  selected =c("PAEC", "IBECA"),
+                  selected =unique(dat$`Testet i pilot`),
                   multiple = T,
                   options = list(
                     `actions-box` = TRUE,
@@ -103,6 +95,17 @@ ui <-
                   choices =met,
                   selected = NULL,
                   multiple = T,
+                  options = list(
+                    `actions-box` = TRUE,
+                    `deselect-all-text` = "Ingen",
+                    `select-all-text` = "Velg alle",
+                    `none-selected-text` = "Ingen valg er gjort"
+                  )),
+      pickerInput(inputId = "utvalgt", 
+                  label = "Prioriterte indikatorer", 
+                  choices =c("ja", "nei"),
+                  selected = NULL,
+                  multiple = F,
                   options = list(
                     `actions-box` = TRUE,
                     `deselect-all-text` = "Ingen",
@@ -309,12 +312,19 @@ server <- function(input, output) {
       t <- datRtab()
       if("Tilnærmet klare til bruk" %in% input$metodevalg) temp <- c(temp, which(t$Metodeutvikling == "klart"))
       if("Delvis utviklet" %in% input$metodevalg)          temp <- c(temp, which(t$Metodeutvikling == "delvis klart"))
+      if("ja" %in% input$utvalgt)                          temp <- c(temp, which(t$Utvalgt == "ja"))
+      if("nei" %in% input$utvalgt)                         temp <- c(temp, which(t$Utvalgt == "nei"))
       temp
     })
   
   output$myTable <- 
     renderDataTable(
-      DT::datatable(datRtab(), 
+      DT::datatable(
+        dplyr::select(datRtab(),
+                      -PAEC,
+                      -IBECA,
+                      -ecoSum,
+                      -incl), 
         
           selection  = list(selected = pre()),
           options = list(scrollX = TRUE)
