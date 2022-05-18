@@ -324,7 +324,9 @@ server <- function(input, output) {
                       -PAEC,
                       -IBECA,
                       -ecoSum,
-                      -incl), 
+                      -incl,
+                      -'Endring ift piloten',
+                      -'Knyttet til flere egenskaper'), 
         
           selection  = list(selected = pre()),
           options = list(scrollX = TRUE)
