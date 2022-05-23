@@ -31,6 +31,7 @@ ui <-
       h2("Fitrer data"),
       br(),
       
+  # INN: Økosystem ----
       pickerInput(inputId = "økosystem", 
                   label = "Økosystem", 
                   choices =eco,
@@ -42,7 +43,21 @@ ui <-
                     `select-all-text` = "Velg alle",
                     `none-selected-text` = "Velg fra listen"
                   )),
-      
+  
+  # INN: Indikatorprosjekt ----
+  pickerInput(inputId = "prosjekt", 
+              label = "Indikatorprosjekt", 
+              choices =unique(dat$indikatorprosjekt),
+              selected =unique(dat$indikatorprosjekt),
+              multiple = T,
+              options = list(
+                `actions-box` = TRUE,
+                `deselect-all-text` = "Ingen",
+                `select-all-text` = "Velg alle",
+                `none-selected-text` = "Venligst velg en eller flere prosjekter"
+              )),
+  
+  # INN: Pilot ----    
       pickerInput(inputId = "pilot", 
                   label = "Uttesting", 
                   choices =unique(dat$`Testet i pilot`),
@@ -54,7 +69,8 @@ ui <-
                     `select-all-text` = "Velg alle",
                     `none-selected-text` = "Velg fra listen"
                   )),
-      
+  
+  # INN: Kjerneindikatorer ----    
       pickerInput(inputId = "kjerne", 
                   label = "Kjerneindikatorer", 
                   choices =kjerne,
@@ -66,6 +82,8 @@ ui <-
                     `select-all-text` = "Velg alle",
                     `none-selected-text` = "Velg fra listen"
                   )),
+  
+  # INN: Utviklingsbehov ----
       pickerInput(inputId = "metode", 
                   label = "Utviklingsbehov", 
                   choices =unique(dat$Metodeutvikling),
@@ -77,6 +95,8 @@ ui <-
                     `select-all-text` = "Velg alle",
                     `none-selected-text` = "Velg fra listen"
                   )),
+  
+  # INN: Øko-egenskap ----
       pickerInput(inputId = "egenskap", 
                   label = "Egenskap", 
                   choices =unique(dat$`Økologisk egenskap`),
@@ -88,8 +108,13 @@ ui <-
                     `select-all-text` = "Velg alle",
                     `none-selected-text` = "Venligst velg en eller flere egenskaper"
                   )),
+  
+  
+  
       br(),
-      h4("Skru av eller på utvalg:"),
+  
+  # UTVALG:  Metodeutvikling ----
+      h4("Skru av eller på utheving:"),
       pickerInput(inputId = "metodevalg", 
                   label = "Metodeutvikling", 
                   choices =met,
@@ -101,10 +126,25 @@ ui <-
                     `select-all-text` = "Velg alle",
                     `none-selected-text` = "Ingen valg er gjort"
                   )),
+  
+  # UTVALG:  Prosjekt ----
+  pickerInput(inputId = "prosjektUtheving", 
+              label = "Indikatorprosjekt", 
+              choices =unique(dat$indikatorprosjekt),
+              selected =NULL,
+              multiple = T,
+              options = list(
+                `actions-box` = TRUE,
+                `deselect-all-text` = "Ingen",
+                `select-all-text` = "Velg alle",
+                `none-selected-text` = "Ingen valg er gjort"
+              )),
+  
+  # UTVALG:  Utvalgte ----
       pickerInput(inputId = "utvalgt", 
-                  label = "Prioriterte indikatorer", 
+                  label = "Marker utvalgte indikatorer", 
                   choices =c("ja", "nei"),
-                  selected = NULL,
+                  selected = "nei",
                   multiple = F,
                   options = list(
                     `actions-box` = TRUE,
@@ -153,7 +193,7 @@ server <- function(input, output) {
   
 ## OPTIONS ######################################################
   # set page length for tables
-  options(DT.options = list(pageLength = 200))
+  options(DT.options = list(pageLength = 20))
   
   
 ## REACTIVE DATASETS ##########################################
@@ -166,12 +206,13 @@ server <- function(input, output) {
                                 variable.name = "Økosystem_long",
                                 na.rm=T)
     meltDat <- meltDat[meltDat$`Økologisk egenskap` %in% input$egenskap,]
+    meltDat <- meltDat[meltDat$indikatorprosjekt %in% input$prosjekt,]
     meltDat
     
   })
   
 
-  # filtrert datasett ytterligere (til figurene, ikke til tabellen)
+  # filtrer datasett ytterligere (til figurene, ikke til tabellen)
   datRfig <- reactive({
     
     temp <- datRMelt()
@@ -198,6 +239,7 @@ server <- function(input, output) {
         temp$`Testet i pilot`         %in% input$pilot    &
         temp$ecoSum                   %in% input$kjerne   &
         temp$`Økologisk egenskap`     %in% input$egenskap &
+        temp$indikatorprosjekt        %in% input$prosjekt &  
         temp$Metodeutvikling          %in% input$metode  
         ,
       ]
@@ -313,7 +355,7 @@ server <- function(input, output) {
       if("Tilnærmet klare til bruk" %in% input$metodevalg) temp <- c(temp, which(t$Metodeutvikling == "klart"))
       if("Delvis utviklet" %in% input$metodevalg)          temp <- c(temp, which(t$Metodeutvikling == "delvis klart"))
       if("ja" %in% input$utvalgt)                          temp <- c(temp, which(t$Utvalgt == "ja"))
-      if("nei" %in% input$utvalgt)                         temp <- c(temp, which(t$Utvalgt == "nei"))
+      temp <- c(temp, which(t$indikatorprosjekt %in% input$prosjektUtheving))
       temp
     })
   
