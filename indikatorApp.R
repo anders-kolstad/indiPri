@@ -4,7 +4,14 @@ dat <- read_excel("data/indikatorer.xlsx",
                        sheet = "Indikatoroversikt")
 
 #dat <- read_excel("data/indikatorer.xlsx", sheet = "Indikatoroversikt")
-
+statuser <- c(
+  "under utvikling",
+  "indikatorkart ferdige",
+  "vurderes",
+  "forkastet",
+  "nedprioritert",
+  "vil utvikles"
+)
 
 # UI ----------------------------------------------------------------------
 
@@ -140,12 +147,12 @@ ui <-
                 `none-selected-text` = "Ingen valg er gjort"
               )),
   
-  # UTVALG:  Utvalgte ----
-      pickerInput(inputId = "utvalgt", 
-                  label = "Marker utvalgte indikatorer", 
-                  choices =c("ja", "nei"),
-                  selected = "nei",
-                  multiple = F,
+  # UTVALG:  Status ----
+      pickerInput(inputId = "status", 
+                  label = "Marker indikatorer basert på status", 
+                  choices = statuser,
+                  selected = NULL,
+                  multiple = T,
                   options = list(
                     `actions-box` = TRUE,
                     `deselect-all-text` = "Ingen",
@@ -354,8 +361,9 @@ server <- function(input, output) {
       t <- datRtab()
       if("Tilnærmet klare til bruk" %in% input$metodevalg) temp <- c(temp, which(t$Metodeutvikling == "klart"))
       if("Delvis utviklet" %in% input$metodevalg)          temp <- c(temp, which(t$Metodeutvikling == "delvis klart"))
-      if("ja" %in% input$utvalgt)                          temp <- c(temp, which(t$Utvalgt == "ja"))
+      #if("ja" %in% input$utvalgt)                          temp <- c(temp, which(t$Utvalgt == "ja"))
       temp <- c(temp, which(t$indikatorprosjekt %in% input$prosjektUtheving))
+      temp <- c(temp, which(t$Status %in% input$status))
       temp
     })
   
