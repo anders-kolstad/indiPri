@@ -5,14 +5,12 @@ dat <- read_excel("data/indikatorer.xlsx",
 
 #dat <- read_excel("data/indikatorer.xlsx", sheet = "Indikatoroversikt")
 statuser <- c(
-  "under utvikling",
-  "indikatorkart ferdige",
   "ferdig",
-  "vurderes",
-  "forkastet",
-  "nedprioritert",
+  "ferdig utkast",
+  "under utvikling",
   "vil utvikles",
-  "testes i en pilotstudie"
+  "vurderes",
+  "forkastet"
 )
 
 # UI ----------------------------------------------------------------------
