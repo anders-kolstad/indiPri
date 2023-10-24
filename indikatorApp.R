@@ -3,6 +3,28 @@ source("libraries.R")
 dat <- read_excel("data/indikatorer.xlsx", 
                        sheet = "Indikatoroversikt")
 
+egenskaper <- c('Pr',"La","Ab","Fu","Bio", "Vi", "Tr")
+names(egenskaper) <- unique(dat$`Økologisk egenskap`)
+
+dat <- dat %>%
+  mutate(`Økologisk egenskap` = case_match(`Økologisk egenskap`,
+                                           unique(meltDat$`Økologisk egenskap`)[1] ~ 'Pr',
+                                           unique(meltDat$`Økologisk egenskap`)[2] ~ "La",
+                                           unique(meltDat$`Økologisk egenskap`)[3] ~ "Ab",
+                                           unique(meltDat$`Økologisk egenskap`)[4] ~ "Fu",
+                                           unique(meltDat$`Økologisk egenskap`)[5] ~ "Bio",
+                                           unique(meltDat$`Økologisk egenskap`)[6] ~ "Vi",
+                                           unique(meltDat$`Økologisk egenskap`)[7] ~ "Tr",
+                                           .default = `Økologisk egenskap`),
+         `ECT-klasse` = case_match(`ECT-klasse`,
+                                   unique(meltDat$`ECT-klasse`)[1] ~ "B3",
+                                   unique(meltDat$`ECT-klasse`)[2] ~ "C1",
+                                   unique(meltDat$`ECT-klasse`)[3] ~ "A2",
+                                   unique(meltDat$`ECT-klasse`)[4] ~ "B2",
+                                   unique(meltDat$`ECT-klasse`)[5] ~ "B1",
+                                   unique(meltDat$`ECT-klasse`)[6] ~ "A1",
+                                   .default = `ECT-klasse`))
+
 #dat <- read_excel("data/indikatorer.xlsx", sheet = "Indikatoroversikt")
 statuser <- c(
   "ferdig",
@@ -52,30 +74,30 @@ ui <-
                   )),
   
   # INN: Indikatorprosjekt ----
-  pickerInput(inputId = "prosjekt", 
-              label = "Indikatorprosjekt", 
-              choices =unique(dat$indikatorprosjekt),
-              selected =unique(dat$indikatorprosjekt),
-              multiple = T,
-              options = list(
-                `actions-box` = TRUE,
-                `deselect-all-text` = "Ingen",
-                `select-all-text` = "Velg alle",
-                `none-selected-text` = "Venligst velg en eller flere prosjekter"
-              )),
+  #pickerInput(inputId = "prosjekt", 
+  #            label = "Indikatorprosjekt", 
+  #            choices =unique(dat$indikatorprosjekt),
+  #            selected =unique(dat$indikatorprosjekt),
+  #            multiple = T,
+  #            options = list(
+  #              `actions-box` = TRUE,
+  #              `deselect-all-text` = "Ingen",
+  #              `select-all-text` = "Velg alle",
+  #              `none-selected-text` = "Venligst velg en eller flere prosjekter"
+  #            )),
   
   # INN: Pilot ----    
-      pickerInput(inputId = "pilot", 
-                  label = "Uttesting", 
-                  choices =unique(dat$`Testet i pilot`),
-                  selected =unique(dat$`Testet i pilot`),
-                  multiple = T,
-                  options = list(
-                    `actions-box` = TRUE,
-                    `deselect-all-text` = "Ingen",
-                    `select-all-text` = "Velg alle",
-                    `none-selected-text` = "Velg fra listen"
-                  )),
+   #  pickerInput(inputId = "pilot", 
+   #              label = "Uttesting", 
+   #              choices =unique(dat$`Testet i pilot`),
+   #              selected =unique(dat$`Testet i pilot`),
+   #              multiple = T,
+   #              options = list(
+   #                `actions-box` = TRUE,
+   #                `deselect-all-text` = "Ingen",
+   #                `select-all-text` = "Velg alle",
+   #                `none-selected-text` = "Velg fra listen"
+   #              )),
   
   # INN: Kjerneindikatorer ----    
       pickerInput(inputId = "kjerne", 
@@ -91,22 +113,22 @@ ui <-
                   )),
   
   # INN: Utviklingsbehov ----
-      pickerInput(inputId = "metode", 
-                  label = "Utviklingsbehov", 
-                  choices =unique(dat$Metodeutvikling),
-                  selected =unique(dat$Metodeutvikling),
-                  multiple = T,
-                  options = list(
-                    `actions-box` = TRUE,
-                    `deselect-all-text` = "Ingen",
-                    `select-all-text` = "Velg alle",
-                    `none-selected-text` = "Velg fra listen"
-                  )),
+   #  pickerInput(inputId = "metode", 
+   #              label = "Utviklingsbehov", 
+   #              choices =unique(dat$Metodeutvikling),
+   #              selected =unique(dat$Metodeutvikling),
+   #              multiple = T,
+   #              options = list(
+   #                `actions-box` = TRUE,
+   #                `deselect-all-text` = "Ingen",
+   #                `select-all-text` = "Velg alle",
+   #                `none-selected-text` = "Velg fra listen"
+   #              )),
   
   # INN: Øko-egenskap ----
       pickerInput(inputId = "egenskap", 
                   label = "Egenskap", 
-                  choices =unique(dat$`Økologisk egenskap`),
+                  choices = egenskaper,
                   selected =unique(dat$`Økologisk egenskap`),
                   multiple = T,
                   options = list(
@@ -121,33 +143,33 @@ ui <-
       br(),
   
   # UTVALG:  Metodeutvikling ----
-      h4("Skru av eller på utheving:"),
-      pickerInput(inputId = "metodevalg", 
-                  label = "Metodeutvikling", 
-                  choices =met,
-                  selected = NULL,
-                  multiple = T,
-                  options = list(
-                    `actions-box` = TRUE,
-                    `deselect-all-text` = "Ingen",
-                    `select-all-text` = "Velg alle",
-                    `none-selected-text` = "Ingen valg er gjort"
-                  )),
+    # pickerInput(inputId = "metodevalg", 
+    #             label = "Metodeutvikling", 
+    #             choices =met,
+    #             selected = NULL,
+    #             multiple = T,
+    #             options = list(
+    #               `actions-box` = TRUE,
+    #               `deselect-all-text` = "Ingen",
+    #               `select-all-text` = "Velg alle",
+    #               `none-selected-text` = "Ingen valg er gjort"
+    #             )),
   
   # UTVALG:  Prosjekt ----
-  pickerInput(inputId = "prosjektUtheving", 
-              label = "Indikatorprosjekt", 
-              choices =unique(dat$indikatorprosjekt),
-              selected =NULL,
-              multiple = T,
-              options = list(
-                `actions-box` = TRUE,
-                `deselect-all-text` = "Ingen",
-                `select-all-text` = "Velg alle",
-                `none-selected-text` = "Ingen valg er gjort"
-              )),
+    # pickerInput(inputId = "prosjektUtheving", 
+    #             label = "Indikatorprosjekt", 
+    #             choices =unique(dat$indikatorprosjekt),
+    #             selected =NULL,
+    #             multiple = T,
+    #             options = list(
+    #               `actions-box` = TRUE,
+    #               `deselect-all-text` = "Ingen",
+    #               `select-all-text` = "Velg alle",
+    #               `none-selected-text` = "Ingen valg er gjort"
+    #             )),
   
   # UTVALG:  Status ----
+     h4("Skru av eller på utheving:"),
       pickerInput(inputId = "status", 
                   label = "Marker indikatorer basert på status", 
                   choices = statuser,
@@ -213,7 +235,7 @@ server <- function(input, output) {
                                 variable.name = "Økosystem_long",
                                 na.rm=T)
     meltDat <- meltDat[meltDat$`Økologisk egenskap` %in% input$egenskap,]
-    meltDat <- meltDat[meltDat$indikatorprosjekt %in% input$prosjekt,]
+    #meltDat <- meltDat[meltDat$indikatorprosjekt %in% input$prosjekt,]
     meltDat
     
   })
@@ -225,9 +247,9 @@ server <- function(input, output) {
     temp <- datRMelt()
     
     temp[
-      temp$`Testet i pilot` %in% input$pilot &
-      temp$ecoSum %in% input$kjerne          &
-      temp$Metodeutvikling %in% input$metode
+      #temp$`Testet i pilot` %in% input$pilot &
+      temp$ecoSum %in% input$kjerne          
+      #temp$Metodeutvikling %in% input$metode
       ,
     ]
   })
@@ -243,11 +265,11 @@ server <- function(input, output) {
     temp <- temp[temp$incl==1,]
 
     temp[
-        temp$`Testet i pilot`         %in% input$pilot    &
+        #temp$`Testet i pilot`         %in% input$pilot    &
         temp$ecoSum                   %in% input$kjerne   &
-        temp$`Økologisk egenskap`     %in% input$egenskap &
-        temp$indikatorprosjekt        %in% input$prosjekt &  
-        temp$Metodeutvikling          %in% input$metode  
+        temp$`Økologisk egenskap`     %in% input$egenskap 
+        #temp$indikatorprosjekt        %in% input$prosjekt &  
+        #temp$Metodeutvikling          %in% input$metode  
         ,
       ]
   })
@@ -359,10 +381,10 @@ server <- function(input, output) {
     
       temp <- as.numeric(NULL)
       t <- datRtab()
-      if("Tilnærmet klare til bruk" %in% input$metodevalg) temp <- c(temp, which(t$Metodeutvikling == "klart"))
-      if("Delvis utviklet" %in% input$metodevalg)          temp <- c(temp, which(t$Metodeutvikling == "delvis klart"))
+      #if("Tilnærmet klare til bruk" %in% input$metodevalg) temp <- c(temp, which(t$Metodeutvikling == "klart"))
+      #if("Delvis utviklet" %in% input$metodevalg)          temp <- c(temp, which(t$Metodeutvikling == "delvis klart"))
       #if("ja" %in% input$utvalgt)                          temp <- c(temp, which(t$Utvalgt == "ja"))
-      temp <- c(temp, which(t$indikatorprosjekt %in% input$prosjektUtheving))
+      #temp <- c(temp, which(t$indikatorprosjekt %in% input$prosjektUtheving))
       temp <- c(temp, which(t$Status %in% input$status))
       temp
     })
@@ -374,6 +396,11 @@ server <- function(input, output) {
                       -PAEC,
                       -IBECA,
                       -ecoSum,
+                      -Våtmark,
+                      -'Semi-naturlig mark',
+                      -'Åpne områder',
+                      -'Testet i pilot',
+                      -Metodeutvikling,
                       -incl,
                       -'Endring ift piloten',
                       -'Knyttet til flere egenskaper'), 
